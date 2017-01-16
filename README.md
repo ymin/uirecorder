@@ -1,4 +1,4 @@
-# UIRecorder
+# UIRecorder [![Gem Version](https://badge.fury.io/rb/uirecorder.svg)](https://badge.fury.io/rb/uirecorder)
 
 UIRecorder is for parsing screen element sources and saving to a yml as a reference template, 
 which helps for checking elements in automation test. 
