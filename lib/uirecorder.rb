@@ -137,12 +137,15 @@ class UIRecorder
       when 'Selenium'
       end
       page_hash = Digest::SHA256.hexdigest(@parsed_nodes.keys.join('/'))
-      @parsed_nodes.merge!('total_elements_count' => @total_elements_count, 'page_hash' => page_hash, 'element_count' => @saved_elements_count)
       if !page_file_name.nil?
         @save_file_path = page_file_name
       else
         @save_file_path = refine_save_file_name
       end
+      @parsed_nodes.merge!('total_elements_count' => @total_elements_count, 
+                           'element_count' => @saved_elements_count,
+                           'page_hash' => page_hash, 
+                           'page_name' => File.basename(@save_file_path, '.*'))
       @logger.debug "Saving elements tree to #{page_file_name}"
       File.open(@save_file_path, 'wb') do |f|
         f.write(@parsed_nodes.to_yaml)
