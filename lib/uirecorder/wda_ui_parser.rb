@@ -72,6 +72,7 @@ class UIRecorder
       @total_elements_count += 1
       node_tmp = {}
       has_children_node = false
+      excluded = false
       @parent_node = tree_node
       @parent_path = @path
       if @path == ''
@@ -87,6 +88,11 @@ class UIRecorder
 
       if !tree_node['type'].nil?
         # binding.pry if @exclude_type.include?(tree_node['type']) && @path == "0/0/0/0/1/0/0/0/0/1"
+        @exclude_element.each_pair do |k, v|
+          if k == tree_node['type'] && tree_node['name'].include?(v)
+            excluded = true
+          end
+        end
         if @exclude_type.include?(tree_node['type'])
           @logger.debug "Skip node with type #{tree_node['type']}"
           if !tree_node["children"].nil? 
@@ -99,18 +105,32 @@ class UIRecorder
         elsif tree_node['type'] == 'Keyboard' && @skip_keyboard
           @keyboard_path = @path
           @logger.debug"Skip Keyboard at path #{@path}"
-          has_children_node = true if !tree_node["children"].nil?
+          if !tree_node["children"].nil? 
+            if tree_node["children"].length == 0
+              has_children_node = false
+            else
+              has_children_node = true 
+            end
+          end
         elsif @keyboard_path != '' && @path.start_with?(@keyboard_path) && @skip_keyboard
           @logger.debug"Skip Keyboard key at path #{@path}"
+        elsif excluded
+          if !tree_node["children"].nil? 
+            if tree_node["children"].length == 0
+              has_children_node = false
+            else
+              has_children_node = true 
+            end
+          end
         else
           tree_node.each_pair do |key, value|
             if key == "children" && value != []
               has_children_node = true
             else
-              node_tmp.merge!(key => value)
+              node_tmp.merge!(key => value) 
             end
           end
-          @parsed_nodes.merge!(@path => node_tmp)
+          @parsed_nodes.merge!(@path => node_tmp) 
           @saved_elements_count += 1
         end
       end

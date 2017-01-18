@@ -19,8 +19,8 @@ class UIRecorder
 
   include ::UIRecorder::WDAUIParser
   
-  attr_accessor :driver, :page_hash, :save_file_path, :skip_keyboard, :exclude_type
-  attr_accessor :element_count
+  attr_accessor :driver, :page_hash, :save_file_path, :skip_keyboard
+  attr_accessor :exclude_element, :exclude_type, :element_count
   attr_reader   :keyboard_path
 
   def initialize(opts = {})
@@ -30,6 +30,7 @@ class UIRecorder
     @save_file_path = opts.fetch :save_file_path, nil
     @skip_keyboard = opts.fetch :skip_keyboard, true
     @exclude_type = opts.fetch :exclude_type, []
+    @exclude_element = opts.fetch :exclude_element, {}
     @show_invisible_element = opts.fetch :show_invisible_element, false
     @show_inaccessible_element = opts.fetch :show_inaccessible_element, false  # Has bug, to be fixed in wda_lib
     @custom_page_file = opts.fetch :custom_page_file, './template.yml'
@@ -56,12 +57,12 @@ class UIRecorder
     case @driver_type.to_s
     when 'WDA'
       begin
-        page = @driver.source(nil, accessible, visible)
-        page.delete('sessionId')
-        page.delete('status')
+        page = @driver.source(nil, accessible, visible, wait_time = 180)
       rescue => e
         @logger.error "Failed to get current page's elements, error: #{e}"
       end
+      page.delete('sessionId')
+      page.delete('status')
       File.open('./tmp/page_elements_tmp.yml', 'wb') do |f|
         f.write(page.to_yaml)
       end
@@ -130,7 +131,7 @@ class UIRecorder
       @driver_type = parser unless parser.nil?
       case @driver_type.to_s
       when 'WDA'
-        init_tree_parser
+        init_tree_parser 
         @page_elements = @page_elements['value']['tree'] # Get elements tree
         wda_dup_node(@page_elements)
       when 'Appium'
@@ -142,17 +143,24 @@ class UIRecorder
       else
         @save_file_path = refine_save_file_name
       end
-      @parsed_nodes.merge!('total_elements_count' => @total_elements_count, 
-                           'element_count' => @saved_elements_count,
-                           'page_hash' => page_hash, 
-                           'page_name' => File.basename(@save_file_path, '.*'))
+      elements = Hash.new
+      elements.merge!(
+        'page_name' => File.basename(@save_file_path, '.*'),
+        'page_hash' => page_hash, 
+        'element_count' => @saved_elements_count,
+        'total_elements_count' => @total_elements_count,
+        'creation_date' => Time.now.strftime('%Y%m%d%H%M%S')
+      )
+      elements.merge!('elements' => @parsed_nodes)
       @logger.debug "Saving elements tree to #{page_file_name}"
       File.open(@save_file_path, 'wb') do |f|
-        f.write(@parsed_nodes.to_yaml)
+        f.write(elements.to_yaml)
       end
       @logger.debug "Current page UI elements are saved in #{page_file_name}"
+      return elements
     else
       @logger.debug "#{@driver_type} device is not available, please check it!"
+      return nil
     end
   end
 end
